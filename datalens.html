@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>DataLens Dashboard</title>
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #666;
+            font-size: 14px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ddd;
+            border-top-color: #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #d32f2f;
+            font-size: 14px;
+            padding: 20px;
+            text-align: center;
+            flex-direction: column;
+        }
+        iframe {
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="status" class="loading">
+        <div class="spinner"></div>
+        <div>Загрузка дашборда...</div>
+    </div>
+    <iframe id="datalens-frame" style="display:none;"></iframe>
+
+    <script>
+        // ═══════════════════════════════════════
+        // ЗАПОЛНИТЕ СВОИ ЗНАЧЕНИЯ ЗДЕСЬ
+        // ═══════════════════════════════════════
+        const CONFIG = {
+            // ID вашего дашборда в DataLens
+            // Берётся из URL: https://datalens.yandex.ru/ВОТ_ЭТОТ_ID
+            DASHBOARD_ID: https://datalens.yandex/owzmadhpnbxg8,
+            
+            // Имя параметра в DataLens (как назовёте в шаге 4)
+            PARAM_NAME: responsible_id
+        };
+
+        BX24.init(function() {
+            BX24.placement.info(function(info) {
+                var dealId = info.options.ID;
+                
+                if (!dealId) {
+                    showError('Не удалось определить ID сделки. Откройте карточку сделки.');
+                    return;
+                }
+
+                BX24.callMethod('crm.deal.get', { ID: dealId }, function(result) {
+                    if (result.error()) {
+                        showError('Ошибка: ' + result.error());
+                        return;
+                    }
+
+                    var deal = result.data();
+                    var responsibleId = deal.ASSIGNED_BY_ID;
+                    
+                    if (!responsibleId) {
+                        showError('В сделке не указан ответственный менеджер');
+                        return;
+                    }
+
+                    var datalensUrl = 'https://datalens.yandex.ru/' + CONFIG.DASHBOARD_ID 
+                        + '?' + CONFIG.PARAM_NAME + '=' + encodeURIComponent(responsibleId);
+
+                    var frame = document.getElementById('datalens-frame');
+                    frame.src = datalensUrl;
+                    frame.style.display = 'block';
+                    document.getElementById('status').style.display = 'none';
+                });
+            });
+        });
+
+        function showError(message) {
+            document.getElementById('status').className = 'error';
+            document.getElementById('status').innerHTML = '<div>⚠️ Ошибка</div><div style="margin-top:10px; color:#666;">' + message + '</div>';
+        }
+    </script>
+</body>
+</html>
